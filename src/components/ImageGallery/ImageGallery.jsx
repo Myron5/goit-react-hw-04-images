@@ -63,7 +63,7 @@ export const ImageGallery = forwardRef(({ value, toggleBtn }, ref) => {
         toggleBtn();
       }
     })();
-  }, [value, page]);
+  }, [value, page]); // eslint-disable-line no-console
 
   if (status === IDLE) {
     return <ul></ul>;
