@@ -1,30 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { PropTypes } from 'prop-types';
+
+// У цьому коді використовується не React підхід до прокидувння методів,
+// а саме функція resetList -> пркидується для батька(App), а сам App бере з цього елемента useRef,
+//                !!!  НЕ ВИКОРИСТОВУВАИ ЦЕЙ КОД ДЛЯ ПРОДАКШИНУ !!!
+//                 краще встанови useState для page i images в App
 
 import { ImageGalleryList } from '../ImageGalleryList/ImageGalleryList';
 import { Nothing } from '../Nothing/Nothing';
 
-import { usePrevious, usePage, useCollection } from '../../hooks';
+// Приклад використання prevValues
+// import { usePreviousn } from '../../hooks';
+// const prev = usePrevious({ value });
+
+import { usePage, useCollection } from '../../hooks';
 import { APIpixabay } from '../../services';
 import { statusObj } from '../../constants';
 
-export const ImageGallery = ({
-  value,
-  toggleBtn,
-  useHookPage,
-  useHookImages,
-}) => {
+export const ImageGallery = forwardRef(({ value, toggleBtn }, ref) => {
   const { IDLE, PENDING, RESOLVED, REJECTED, EMPTY } = statusObj;
 
-  // const [page, resetPage, incrementPage] = usePage();
-  // const [images, resetImages, addImages] = useCollection();
-
-  const [page, resetPage, incrementPage] = useHookPage;
-  const [images, resetImages, addImages] = useHookImages;
+  const [page, resetPage, incrementPage] = usePage();
+  const [images, resetImages, addImages] = useCollection();
 
   const [status, setStatus] = useState(IDLE);
   const [isEnd, setIsEnd] = useState(false);
-  const prev = usePrevious({ value });
 
   const updateImages = async () => {
     const data = await APIpixabay.getPhotos(value, page);
@@ -35,17 +35,19 @@ export const ImageGallery = ({
     return totalPage;
   };
 
+  useImperativeHandle(ref, () => ({
+    resetList() {
+      resetPage();
+      resetImages();
+    },
+  }));
+
   useEffect(() => {
     if (value === '') return;
 
     (async () => {
       try {
         toggleBtn();
-
-        if (prev.value !== value) {
-          resetPage();
-          resetImages();
-        }
 
         setStatus(PENDING);
         setIsEnd(false);
@@ -85,7 +87,7 @@ export const ImageGallery = ({
   if (status === EMPTY) {
     return <Nothing />;
   }
-};
+});
 
 ImageGallery.propTypes = {
   value: PropTypes.string.isRequired,

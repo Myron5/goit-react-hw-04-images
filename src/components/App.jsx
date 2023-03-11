@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useToggle, usePage, useCollection } from '../hooks';
+import { useState, useRef } from 'react';
+import { useToggle } from '../hooks';
 
 import { AppBox, Header, Section } from './GeneralContainers';
 import { SearchBar } from './Searchbar/Searchbar';
@@ -9,15 +9,15 @@ export const App = () => {
   const [query, setQuery] = useState('');
   const [disableSearch, toggleDisableSearch] = useToggle(false);
 
-  const [page, resetPage, incrementPage] = usePage();
-  const [images, resetImages, addImages] = useCollection();
+  const listRef = useRef();
 
   const handleOnSubmit = async e => {
     e.preventDefault();
     const value = e.currentTarget.elements.search.value;
     setQuery(value);
-    resetPage();
-    resetImages();
+    listRef.current.resetList();
+    // resetPage();
+    // resetImages();
   };
 
   return (
@@ -27,10 +27,9 @@ export const App = () => {
       </Header>
       <Section>
         <ImageGallery
+          ref={listRef}
           value={query}
           toggleBtn={toggleDisableSearch}
-          useHookPage={[page, resetPage, incrementPage]}
-          useHookImages={[images, resetImages, addImages]}
         />
       </Section>
     </AppBox>
