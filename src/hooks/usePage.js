@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 export const usePage = (initialState = 1) => {
   const [state, setState] = useState(initialState);
