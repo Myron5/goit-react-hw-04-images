@@ -1,101 +1,91 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { PropTypes } from 'prop-types';
 
-import { APIpixabay } from '../../services';
 import { ImageGalleryList } from '../ImageGalleryList/ImageGalleryList';
 import { Nothing } from '../Nothing/Nothing';
 
-export class ImageGallery extends Component {
-  state = {
-    page: 1,
-    status: 'idle',
-    images: [],
-    isEnd: false,
+import { usePrevious, usePage, useCollection } from '../../hooks';
+import { APIpixabay } from '../../services';
+import { statusObj } from '../../constants';
+
+export const ImageGallery = ({
+  value,
+  toggleBtn,
+  useHookPage,
+  useHookImages,
+}) => {
+  const { IDLE, PENDING, RESOLVED, REJECTED, EMPTY } = statusObj;
+
+  // const [page, resetPage, incrementPage] = usePage();
+  // const [images, resetImages, addImages] = useCollection();
+
+  const [page, resetPage, incrementPage] = useHookPage;
+  const [images, resetImages, addImages] = useHookImages;
+
+  const [status, setStatus] = useState(IDLE);
+  const [isEnd, setIsEnd] = useState(false);
+  const prev = usePrevious({ value });
+
+  const updateImages = async () => {
+    const data = await APIpixabay.getPhotos(value, page);
+    const { totalPage, hits } = data;
+    await new Promise(r => setTimeout(r, 500));
+    await addImages(hits);
+
+    return totalPage;
   };
 
-  handleOnLoadMore = () => {
-    this.setState(prev => ({ page: prev.page + 1 }));
-  };
-
-  // shouldComponentUpdate(prevProps, prevState) {
-  //   const { value } = this.props;
-  //   const { page, images } = this.state;
-
-  //   if (
-  //     prevProps.value === value &&
-  //     prevState.page === page &&
-  //     images.length !== 0
-  //   ) {
-  //     console.log(false);
-  //     return false;
-  //   }
-  //   return true;
-  // }
-
-  async componentDidUpdate(prevProps, prevState) {
-    const promisedSetState = newState =>
-      new Promise(resolve => this.setState(newState, resolve));
-
-    const { value, toggleBtn } = this.props;
-    const { page, images } = this.state;
-
+  useEffect(() => {
     if (value === '') return;
 
-    if (prevProps.value !== value || prevState.page !== page) {
+    (async () => {
       try {
         toggleBtn();
 
-        const newState =
-          prevProps.value === value
-            ? { status: 'pending', isEnd: false }
-            : {
-                status: 'pending',
-                isEnd: false,
-                page: 1,
-                images: [],
-              };
-        await promisedSetState(newState);
-        const data = await APIpixabay.getPhotos(value, this.state.page);
-        await new Promise(r => setTimeout(r, 500));
+        if (prev.value !== value) {
+          resetPage();
+          resetImages();
+        }
 
-        const newStatus = data.totalPage === 0 ? 'empty' : 'resolved';
-        const newImages = [...images, ...data.hits];
+        setStatus(PENDING);
+        setIsEnd(false);
 
-        this.setState({
-          status: newStatus,
-          images: newImages,
-          isEnd: data.totalPage === this.state.page,
-        });
+        const totalPage = await updateImages();
+
+        setIsEnd(totalPage === page);
+        setStatus(totalPage === 0 ? EMPTY : RESOLVED);
       } catch (error) {
-        this.setState({ status: 'rejected' });
+        setStatus(REJECTED);
         console.log(error);
       } finally {
         toggleBtn();
       }
-    }
+    })();
+  }, [value, page]);
+
+  if (status === IDLE) {
+    return <ul></ul>;
   }
 
-  render() {
-    const { status, images, isEnd } = this.state;
-
-    if (status === 'resolved' || status === 'pending')
-      return (
-        <ImageGalleryList
-          images={images}
-          status={status}
-          isEnd={isEnd}
-          handleLoad={this.handleOnLoadMore}
-        />
-      );
-
-    if (status === 'empty') {
-      return <Nothing />;
-    }
-
-    if (status === 'rejected')
-      return <div>Щось пішло не так, перезавантажте сторінку ...</div>;
+  if (status === PENDING || status === RESOLVED) {
+    return (
+      <ImageGalleryList
+        images={images}
+        status={status}
+        isEnd={isEnd}
+        handleLoad={incrementPage}
+      />
+    );
   }
-}
+
+  if (status === REJECTED) {
+    return <div>Щось пішло не так, перезавантажте сторінку ...</div>;
+  }
+
+  if (status === EMPTY) {
+    return <Nothing />;
+  }
+};
 
 ImageGallery.propTypes = {
   value: PropTypes.string.isRequired,

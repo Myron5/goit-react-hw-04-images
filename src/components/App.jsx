@@ -1,41 +1,38 @@
-import { Component } from 'react';
+import { useState } from 'react';
+import { useToggle, usePage, useCollection } from '../hooks';
 
 import { AppBox, Header, Section } from './GeneralContainers';
 import { SearchBar } from './Searchbar/Searchbar';
 import { ImageGallery } from './ImageGallery/ImageGallery';
 
-export class App extends Component {
-  state = {
-    searchQuery: '',
-    disableSearch: false,
-  };
+export const App = () => {
+  const [query, setQuery] = useState('');
+  const [disableSearch, toggleDisableSearch] = useToggle(false);
 
-  handleOnSubmit = async e => {
+  const [page, resetPage, incrementPage] = usePage();
+  const [images, resetImages, addImages] = useCollection();
+
+  const handleOnSubmit = async e => {
     e.preventDefault();
     const value = e.currentTarget.elements.search.value;
-    this.setState({ searchQuery: value });
+    setQuery(value);
+    resetPage();
+    resetImages();
   };
 
-  toggleDisableSearch = () => {
-    this.setState(prev => ({ disableSearch: !prev.disableSearch }));
-  };
-
-  render() {
-    return (
-      <AppBox>
-        <Header>
-          <SearchBar
-            disableValue={this.state.disableSearch}
-            onSubmit={this.handleOnSubmit}
-          />
-        </Header>
-        <Section>
-          <ImageGallery
-            value={this.state.searchQuery}
-            toggleBtn={this.toggleDisableSearch}
-          />
-        </Section>
-      </AppBox>
-    );
-  }
-}
+  return (
+    <AppBox>
+      <Header>
+        <SearchBar disableValue={disableSearch} onSubmit={handleOnSubmit} />
+      </Header>
+      <Section>
+        <ImageGallery
+          value={query}
+          toggleBtn={toggleDisableSearch}
+          useHookPage={[page, resetPage, incrementPage]}
+          useHookImages={[images, resetImages, addImages]}
+        />
+      </Section>
+    </AppBox>
+  );
+};
